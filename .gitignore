@@ -1,0 +1,6 @@
+terraform.tfvars
+terraform.tfstate
+1
+terraform.tfstate.backup
+deploy.retry
+*.zip

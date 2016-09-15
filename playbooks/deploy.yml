@@ -1,0 +1,73 @@
+---
+- hosts: web
+  become: true
+  gather_facts: True
+  tasks:
+#shamelessly plagarised from http://johndstein-blog.logdown.com/posts/356381 - But he is a good fellow and wont mind
+    - name: add docker apt key
+      apt_key:
+        keyserver: hkp://p80.pool.sks-keyservers.net:80
+        id: 58118E89F3A912897C070ADBF76221572C52609D
+
+    - name: add docker apt repository
+      apt_repository:
+        repo: deb https://apt.dockerproject.org/repo ubuntu-trusty main
+        update_cache: yes
+
+    - name: uninstall old docker
+      apt:
+        name: lxc-docker
+        purge: yes
+      failed_when: no
+
+    - name: install docker
+      apt:
+        name: docker-engine
+
+    - name: add ubuntu to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: add teamcity to docker group
+      user:
+        name: teamcity
+        groups: docker
+        append: yes
+
+    - name: get docker compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.5.2/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: 0755
+    - name: install pip
+      apt: name=python-pip state=latest
+
+    - name: work around docker-py
+      pip:
+       executable=/usr/bin/pip
+       name=docker-py
+       state=present
+       version=1.8.1
+    - name: application container
+      docker:
+        name: myapplication
+        image: wordpress
+        state: reloaded
+        pull: always
+    - name: "Launch database container"
+      docker:
+        name: db
+        image: mariadb
+        env:
+          MYSQL_ROOT_PASSWORD: example
+
+    - name: "Launch wordpress container"
+      docker:
+        name: wordpress
+        image: wordpress
+        links:
+        - db:mysql
+        ports:
+          - 8080:80
